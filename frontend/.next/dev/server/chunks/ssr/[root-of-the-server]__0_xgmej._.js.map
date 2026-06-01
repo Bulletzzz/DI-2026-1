@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 10, "column": 0}, "map": {"version":3,"sources":["file:///C:/Users/Du/Desktop/Atalhos/Algos/DI%202025/frontend/app/page.tsx"],"sourcesContent":["import { redirect } from \"next/navigation\"\n\nexport default function Pagina() {\n  redirect(\"/login\")\n}\n"],"names":["Pagina"],"mappings":";;;;AAAA;AAAA;;AAEe,SAASA;IACtB,IAAA,wPAAQ,EAAC;AACX"}}]
+}
