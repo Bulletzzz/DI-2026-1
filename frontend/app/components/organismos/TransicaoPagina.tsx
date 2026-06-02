@@ -43,7 +43,7 @@ export default function TransicaoPagina({ children }: { children: React.ReactNod
 
     gsap.to(blocosRef.current, {
       scaleX: 0,
-      duration: 0.75,
+      duration: 0.35,
       stagger: 0.04,
       ease: "power3.inOut",
       transformOrigin: "right",
