@@ -7,7 +7,7 @@ import Badge from "@/app/components/atomos/Badge"
 
 function SecaoRelatorio({ titulo, subtitulo, children }: { titulo: string; subtitulo: string; children: React.ReactNode }) {
   return (
-    <section className="bg-[#1a1a1a] border border-white/[0.08]">
+    <section className="bg-[#1a1a1a] border border-white/[0.08] print:break-inside-avoid">
       <div className="px-6 py-4 border-b border-white/[0.06]">
         <h2 className="font-display text-xl text-white tracking-wide">{titulo}</h2>
         <p className="text-[#4d4d4d] text-xs mt-0.5 tracking-wide uppercase">{subtitulo}</p>
@@ -73,8 +73,16 @@ export default function PaginaRelatorios() {
   }, 0)
 
   return (
-    <div className="p-8 animar-entrada">
-      <div className="flex items-start justify-between mb-8">
+    <div className="area-relatorio p-8 animar-entrada">
+      <div className="cabecalho-pdf hidden items-end justify-between pb-6 mb-8 border-b-2 border-[#0f0f0f]">
+        <div>
+          <p className="font-display text-4xl tracking-[0.15em] text-[#0f0f0f]">BEAST</p>
+          <p className="text-xs tracking-widest uppercase text-[#666]">Relatório Gerencial e de Decisão Estratégica</p>
+        </div>
+        <p className="text-xs text-[#666]">Gerado em {new Date().toLocaleDateString("pt-BR")}</p>
+      </div>
+
+      <div className="flex items-start justify-between mb-8 print:hidden">
         <div>
           <h1 className="font-display text-5xl text-white tracking-wide">RELATÓRIOS</h1>
           <p className="text-[#4d4d4d] text-sm mt-1">Gerado em {new Date().toLocaleDateString("pt-BR")}</p>

@@ -125,6 +125,40 @@ body {
   }
 
   @page {
-    margin: 12mm;
+    margin: 14mm;
   }
+
+  .cabecalho-pdf {
+    display: flex !important;
+  }
+
+  .area-relatorio {
+    padding: 0 !important;
+  }
+
+  .area-relatorio,
+  .area-relatorio * {
+    color: #1a1a1a !important;
+    border-color: #d9d9d9 !important;
+  }
+
+  .area-relatorio section {
+    background-color: #ffffff !important;
+    border: 1px solid #d9d9d9 !important;
+  }
+
+  .area-relatorio [class*="1a1a1a"],
+  .area-relatorio [class*="0f0f0f"],
+  .area-relatorio [class*="111111"] {
+    background-color: #ffffff !important;
+  }
+
+  .area-relatorio [class*="262626"] {
+    background-color: #e5e5e5 !important;
+  }
+
+  .area-relatorio [class*="f97316"] { color: #c2410c !important; }
+  .area-relatorio [class*="ef4444"] { color: #dc2626 !important; }
+  .area-relatorio [class*="f59e0b"] { color: #b45309 !important; }
+  .area-relatorio [class*="22c55e"] { color: #15803d !important; }
 }
