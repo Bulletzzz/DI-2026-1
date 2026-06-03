@@ -1,44 +1,74 @@
 "use client"
 
 import { useState } from "react"
-import { categorias as dadosIniciais, produtos, type Categoria } from "@/app/dados/mock"
+import { listarCategorias, criarCategoria, atualizarCategoria, removerCategoria } from "@/app/servicos/categorias"
+import { listarProdutos } from "@/app/servicos/produtos"
+import { useCarregar } from "@/app/ganchos/useCarregar"
+import type { Categoria, Produto } from "@/app/tipos"
 import TabelaDados from "@/app/components/organismos/TabelaDados"
 import Modal from "@/app/components/organismos/Modal"
 import Botao from "@/app/components/atomos/Botao"
 import CampoTexto from "@/app/components/atomos/CampoTexto"
+import EstadoConteudo from "@/app/components/celulas/EstadoConteudo"
 
 export default function PaginaCategorias() {
-  const [lista, setLista] = useState<Categoria[]>(dadosIniciais)
+  const { dados, carregando, erro, recarregar } = useCarregar(async () => {
+    const [categorias, produtos] = await Promise.all([listarCategorias(), listarProdutos()])
+    return { categorias, produtos }
+  })
+
+  const lista = dados?.categorias ?? []
+  const produtos: Produto[] = dados?.produtos ?? []
+
   const [modalAberto, setModalAberto] = useState(false)
   const [editando, setEditando] = useState<Categoria | null>(null)
   const [nome, setNome] = useState("")
-  const [erro, setErro] = useState("")
+  const [erroCampo, setErroCampo] = useState("")
+  const [erroSalvar, setErroSalvar] = useState("")
   const [deletando, setDeletando] = useState<number | null>(null)
-  const [proximo, setProximo] = useState(lista.length + 1)
+  const [salvando, setSalvando] = useState(false)
 
   function abrirCriar() {
     setEditando(null)
     setNome("")
-    setErro("")
+    setErroCampo("")
+    setErroSalvar("")
     setModalAberto(true)
   }
 
   function abrirEditar(c: Categoria) {
     setEditando(c)
     setNome(c.nome)
-    setErro("")
+    setErroCampo("")
+    setErroSalvar("")
     setModalAberto(true)
   }
 
-  function salvar() {
-    if (!nome.trim()) { setErro("Obrigatório"); return }
-    if (editando) {
-      setLista(prev => prev.map(c => c.id === editando.id ? { ...c, nome } : c))
-    } else {
-      setLista(prev => [...prev, { id: proximo, nome }])
-      setProximo(n => n + 1)
+  async function salvar() {
+    if (!nome.trim()) { setErroCampo("Obrigatório"); return }
+    setSalvando(true)
+    setErroSalvar("")
+    try {
+      if (editando) await atualizarCategoria(editando.id, { nome })
+      else await criarCategoria({ nome })
+      setModalAberto(false)
+      recarregar()
+    } catch (e) {
+      setErroSalvar((e as Error).message)
+    } finally {
+      setSalvando(false)
     }
-    setModalAberto(false)
+  }
+
+  async function deletar(id: number) {
+    try {
+      await removerCategoria(id)
+      setDeletando(null)
+      recarregar()
+    } catch (e) {
+      setErroSalvar((e as Error).message)
+      setDeletando(null)
+    }
   }
 
   const totalProdutos = (id: number) => produtos.filter(p => p.categoriaId === id).length
@@ -61,7 +91,7 @@ export default function PaginaCategorias() {
         if (deletando === id) {
           return (
             <div className="flex items-center gap-2 justify-end">
-              <button onClick={() => { setLista(p => p.filter(x => x.id !== id)); setDeletando(null) }} className="text-[10px] text-[#ef4444] uppercase tracking-widest hover:underline">Confirmar</button>
+              <button onClick={() => deletar(id)} className="text-[10px] text-[#ef4444] uppercase tracking-widest hover:underline">Confirmar</button>
               <button onClick={() => setDeletando(null)} className="text-[10px] text-[#666] uppercase tracking-widest hover:underline">Cancelar</button>
             </div>
           )
@@ -102,7 +132,9 @@ export default function PaginaCategorias() {
       </div>
 
       <div className="bg-[#1a1a1a] border border-white/[0.08]">
-        <TabelaDados colunas={colunas} dados={lista as unknown as Record<string, unknown>[]} semDados="Nenhuma categoria encontrada" />
+        <EstadoConteudo carregando={carregando} erro={erro} aoTentar={recarregar}>
+          <TabelaDados colunas={colunas} dados={lista as unknown as Record<string, unknown>[]} semDados="Nenhuma categoria encontrada" />
+        </EstadoConteudo>
       </div>
 
       <Modal aberto={modalAberto} onFechar={() => setModalAberto(false)} titulo={editando ? "Editar Categoria" : "Nova Categoria"}>
@@ -110,13 +142,14 @@ export default function PaginaCategorias() {
           <CampoTexto
             rotulo="Nome"
             value={nome}
-            onChange={e => { setNome(e.target.value); setErro("") }}
-            erro={erro}
+            onChange={e => { setNome(e.target.value); setErroCampo("") }}
+            erro={erroCampo}
             autoFocus
           />
+          {erroSalvar && <p className="text-[#ef4444] text-xs">{erroSalvar}</p>}
           <div className="flex justify-end gap-3 pt-2">
             <Botao variante="fantasma" onClick={() => setModalAberto(false)}>Cancelar</Botao>
-            <Botao onClick={salvar}>Salvar</Botao>
+            <Botao onClick={salvar} carregando={salvando}>Salvar</Botao>
           </div>
         </div>
       </Modal>

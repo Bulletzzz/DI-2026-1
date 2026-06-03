@@ -2,33 +2,37 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { clientes as dadosIniciais, scoreClientes, formatarData, type Cliente } from "@/app/dados/mock"
+import { listarClientes, criarCliente, atualizarCliente, removerCliente } from "@/app/servicos/clientes"
+import { listarScores } from "@/app/servicos/ia"
+import { useCarregar } from "@/app/ganchos/useCarregar"
+import type { Cliente, ScoreCliente, NovoCliente } from "@/app/tipos"
 import TabelaDados from "@/app/components/organismos/TabelaDados"
 import Modal from "@/app/components/organismos/Modal"
 import Badge from "@/app/components/atomos/Badge"
 import Botao from "@/app/components/atomos/Botao"
 import CampoTexto from "@/app/components/atomos/CampoTexto"
+import EstadoConteudo from "@/app/components/celulas/EstadoConteudo"
 
-interface FormCliente {
-  nome: string
-  email: string
-  cidade: string
-  estado: string
-  pais: string
-}
-
-const formVazio: FormCliente = { nome: "", email: "", cidade: "", estado: "", pais: "Brasil" }
+const formVazio: NovoCliente = { nome: "", email: "", cidade: "", estado: "", pais: "Brasil" }
 
 export default function PaginaClientes() {
   const router = useRouter()
-  const [lista, setLista] = useState<Cliente[]>(dadosIniciais)
+  const { dados, carregando, erro, recarregar } = useCarregar(async () => {
+    const [clientes, scores] = await Promise.all([listarClientes(), listarScores()])
+    return { clientes, scores }
+  })
+
+  const lista: Cliente[] = dados?.clientes ?? []
+  const scores: ScoreCliente[] = dados?.scores ?? []
+
   const [busca, setBusca] = useState("")
   const [modalAberto, setModalAberto] = useState(false)
   const [editando, setEditando] = useState<Cliente | null>(null)
-  const [form, setForm] = useState<FormCliente>(formVazio)
-  const [erros, setErros] = useState<Partial<FormCliente>>({})
+  const [form, setForm] = useState<NovoCliente>(formVazio)
+  const [erros, setErros] = useState<Partial<NovoCliente>>({})
+  const [erroSalvar, setErroSalvar] = useState("")
+  const [salvando, setSalvando] = useState(false)
   const [deletando, setDeletando] = useState<number | null>(null)
-  const [proximo, setProximo] = useState(lista.length + 1)
 
   const filtrados = lista.filter(c =>
     c.nome.toLowerCase().includes(busca.toLowerCase()) ||
@@ -40,6 +44,7 @@ export default function PaginaClientes() {
     setEditando(null)
     setForm(formVazio)
     setErros({})
+    setErroSalvar("")
     setModalAberto(true)
   }
 
@@ -47,11 +52,12 @@ export default function PaginaClientes() {
     setEditando(c)
     setForm({ nome: c.nome, email: c.email, cidade: c.cidade, estado: c.estado, pais: c.pais })
     setErros({})
+    setErroSalvar("")
     setModalAberto(true)
   }
 
   function validar() {
-    const e: Partial<FormCliente> = {}
+    const e: Partial<NovoCliente> = {}
     if (!form.nome.trim()) e.nome = "Obrigatório"
     if (!form.email.trim()) e.email = "Obrigatório"
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = "E-mail inválido"
@@ -61,24 +67,34 @@ export default function PaginaClientes() {
     return e
   }
 
-  function salvar() {
+  async function salvar() {
     const e = validar()
     if (Object.keys(e).length > 0) { setErros(e); return }
-    if (editando) {
-      setLista(prev => prev.map(c => c.id === editando.id ? { ...c, ...form } : c))
-    } else {
-      setLista(prev => [...prev, { id: proximo, ...form, criadoEm: new Date().toISOString().split("T")[0] }])
-      setProximo(n => n + 1)
+    setSalvando(true)
+    setErroSalvar("")
+    try {
+      if (editando) await atualizarCliente(editando.id, form)
+      else await criarCliente(form)
+      setModalAberto(false)
+      recarregar()
+    } catch (err) {
+      setErroSalvar((err as Error).message)
+    } finally {
+      setSalvando(false)
     }
-    setModalAberto(false)
   }
 
-  function deletar(id: number) {
-    setLista(prev => prev.filter(c => c.id !== id))
-    setDeletando(null)
+  async function deletar(id: number) {
+    try {
+      await removerCliente(id)
+      setDeletando(null)
+      recarregar()
+    } catch {
+      setDeletando(null)
+    }
   }
 
-  const campo = (chave: keyof FormCliente, rotulo: string, tipo = "text") => (
+  const campo = (chave: keyof NovoCliente, rotulo: string, tipo = "text") => (
     <CampoTexto
       rotulo={rotulo}
       type={tipo}
@@ -100,7 +116,7 @@ export default function PaginaClientes() {
       rotulo: "Churn",
       chave: "id",
       renderizar: (v: unknown) => {
-        const s = scoreClientes.find(s => s.clienteId === Number(v))
+        const s = scores.find(s => s.clienteId === Number(v))
         return s ? <Badge tipo={riscoTipo(s.riscoChurn) as "sucesso" | "erro" | "aviso"}>{s.riscoChurn}</Badge> : <Badge>-</Badge>
       },
     },
@@ -109,7 +125,7 @@ export default function PaginaClientes() {
       chave: "id",
       alinhamento: "centro" as const,
       renderizar: (v: unknown) => {
-        const s = scoreClientes.find(s => s.clienteId === Number(v))
+        const s = scores.find(s => s.clienteId === Number(v))
         return <span className="font-mono font-bold text-[#f97316]">{s?.scoring ?? "-"}</span>
       },
     },
@@ -168,7 +184,7 @@ export default function PaginaClientes() {
       </div>
 
       <div className="mb-4">
-        <div className="relative w-80">
+        <div className="relative w-80 max-w-full">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4d4d4d]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
           </svg>
@@ -183,12 +199,14 @@ export default function PaginaClientes() {
       </div>
 
       <div className="bg-[#1a1a1a] border border-white/[0.08]">
-        <TabelaDados
-          colunas={colunas}
-          dados={filtrados as unknown as Record<string, unknown>[]}
-          aoClicarLinha={l => router.push(`/clientes/${l.id}`)}
-          semDados="Nenhum aluno encontrado"
-        />
+        <EstadoConteudo carregando={carregando} erro={erro} aoTentar={recarregar}>
+          <TabelaDados
+            colunas={colunas}
+            dados={filtrados as unknown as Record<string, unknown>[]}
+            aoClicarLinha={l => router.push(`/clientes/${l.id}`)}
+            semDados="Nenhum aluno encontrado"
+          />
+        </EstadoConteudo>
       </div>
 
       <Modal aberto={modalAberto} onFechar={() => setModalAberto(false)} titulo={editando ? "Editar Aluno" : "Novo Aluno"}>
@@ -200,9 +218,10 @@ export default function PaginaClientes() {
             {campo("estado", "Estado")}
           </div>
           {campo("pais", "País")}
+          {erroSalvar && <p className="text-[#ef4444] text-xs">{erroSalvar}</p>}
           <div className="flex justify-end gap-3 pt-2">
             <Botao variante="fantasma" onClick={() => setModalAberto(false)}>Cancelar</Botao>
-            <Botao onClick={salvar}>Salvar</Botao>
+            <Botao onClick={salvar} carregando={salvando}>Salvar</Botao>
           </div>
         </div>
       </Modal>

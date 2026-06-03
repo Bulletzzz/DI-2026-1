@@ -1,12 +1,18 @@
 "use client"
 
 import { useState } from "react"
-import { pedidos as dadosIniciais, clientes, produtos, formatarReais, formatarData, type Pedido } from "@/app/dados/mock"
+import { listarPedidos, criarPedido } from "@/app/servicos/pedidos"
+import { listarClientes } from "@/app/servicos/clientes"
+import { listarProdutos } from "@/app/servicos/produtos"
+import { useCarregar } from "@/app/ganchos/useCarregar"
+import { formatarReais, formatarData } from "@/app/utilitarios/formato"
+import type { Pedido, Cliente, Produto } from "@/app/tipos"
 import TabelaDados from "@/app/components/organismos/TabelaDados"
 import Modal from "@/app/components/organismos/Modal"
 import Botao from "@/app/components/atomos/Botao"
 import Select from "@/app/components/atomos/Select"
 import CampoTexto from "@/app/components/atomos/CampoTexto"
+import EstadoConteudo from "@/app/components/celulas/EstadoConteudo"
 
 interface ItemForm {
   produtoId: number
@@ -19,15 +25,31 @@ interface FormPedido {
 }
 
 export default function PaginaPedidos() {
-  const [lista, setLista] = useState<Pedido[]>(dadosIniciais)
+  const { dados, carregando, erro, recarregar } = useCarregar(async () => {
+    const [pedidos, clientes, produtos] = await Promise.all([listarPedidos(), listarClientes(), listarProdutos()])
+    return { pedidos, clientes, produtos }
+  })
+
+  const lista: Pedido[] = dados?.pedidos ?? []
+  const clientes: Cliente[] = dados?.clientes ?? []
+  const produtos: Produto[] = dados?.produtos ?? []
+
   const [modalAberto, setModalAberto] = useState(false)
   const [filtroCliente, setFiltroCliente] = useState("todos")
-  const [form, setForm] = useState<FormPedido>({ clienteId: clientes[0].id, itens: [{ produtoId: produtos[0].id, quantidade: 1 }] })
-  const [proximo, setProximo] = useState(lista.length + 1)
+  const [form, setForm] = useState<FormPedido>({ clienteId: 0, itens: [] })
+  const [erroSalvar, setErroSalvar] = useState("")
+  const [salvando, setSalvando] = useState(false)
 
   const filtrados = lista.filter(p =>
     filtroCliente === "todos" || String(p.clienteId) === filtroCliente
   )
+
+  function abrirModal() {
+    if (clientes.length === 0 || produtos.length === 0) return
+    setForm({ clienteId: clientes[0].id, itens: [{ produtoId: produtos[0].id, quantidade: 1 }] })
+    setErroSalvar("")
+    setModalAberto(true)
+  }
 
   function adicionarItem() {
     setForm(prev => ({ ...prev, itens: [...prev.itens, { produtoId: produtos[0].id, quantidade: 1 }] }))
@@ -44,21 +66,19 @@ export default function PaginaPedidos() {
     }))
   }
 
-  function salvar() {
-    const total = form.itens.reduce((acc, item) => {
-      const produto = produtos.find(p => p.id === item.produtoId)
-      return acc + (produto?.preco ?? 0) * item.quantidade
-    }, 0)
-    setLista(prev => [...prev, {
-      id: proximo,
-      clienteId: form.clienteId,
-      itens: form.itens,
-      total,
-      criadoEm: new Date().toISOString().split("T")[0],
-    }])
-    setProximo(n => n + 1)
-    setModalAberto(false)
-    setForm({ clienteId: clientes[0].id, itens: [{ produtoId: produtos[0].id, quantidade: 1 }] })
+  async function salvar() {
+    if (form.itens.length === 0) { setErroSalvar("Adicione pelo menos um item"); return }
+    setSalvando(true)
+    setErroSalvar("")
+    try {
+      await criarPedido({ clienteId: form.clienteId, itens: form.itens })
+      setModalAberto(false)
+      recarregar()
+    } catch (e) {
+      setErroSalvar((e as Error).message)
+    } finally {
+      setSalvando(false)
+    }
   }
 
   const totalForm = form.itens.reduce((acc, item) => {
@@ -88,7 +108,7 @@ export default function PaginaPedidos() {
       rotulo: "Itens",
       chave: "itens",
       renderizar: (v: unknown) => {
-        const itens = v as { produtoId: number; quantidade: number }[]
+        const itens = v as ItemForm[]
         const nomes = itens.map(i => {
           const p = produtos.find(pr => pr.id === i.produtoId)
           return `${p?.nome ?? "?"} ×${i.quantidade}`
@@ -117,7 +137,7 @@ export default function PaginaPedidos() {
           <h1 className="font-display text-5xl text-white tracking-wide">PEDIDOS</h1>
           <p className="text-[#4d4d4d] text-sm mt-1">{lista.length} pedidos registrados</p>
         </div>
-        <Botao onClick={() => setModalAberto(true)}>
+        <Botao onClick={abrirModal}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
             <path d="M12 5v14M5 12h14" />
           </svg>
@@ -130,7 +150,9 @@ export default function PaginaPedidos() {
       </div>
 
       <div className="bg-[#1a1a1a] border border-white/[0.08]">
-        <TabelaDados colunas={colunas} dados={filtrados as unknown as Record<string, unknown>[]} semDados="Nenhum pedido encontrado" />
+        <EstadoConteudo carregando={carregando} erro={erro} aoTentar={recarregar}>
+          <TabelaDados colunas={colunas} dados={filtrados as unknown as Record<string, unknown>[]} semDados="Nenhum pedido encontrado" />
+        </EstadoConteudo>
       </div>
 
       <Modal aberto={modalAberto} onFechar={() => setModalAberto(false)} titulo="Novo Pedido" largura="max-w-xl">
@@ -184,9 +206,11 @@ export default function PaginaPedidos() {
             <span className="font-display text-2xl text-[#f97316]">{formatarReais(totalForm)}</span>
           </div>
 
+          {erroSalvar && <p className="text-[#ef4444] text-xs">{erroSalvar}</p>}
+
           <div className="flex justify-end gap-3">
             <Botao variante="fantasma" onClick={() => setModalAberto(false)}>Cancelar</Botao>
-            <Botao onClick={salvar}>Confirmar Pedido</Botao>
+            <Botao onClick={salvar} carregando={salvando}>Confirmar Pedido</Botao>
           </div>
         </div>
       </Modal>

@@ -1,13 +1,18 @@
 "use client"
 
 import { useState } from "react"
-import { produtos as dadosIniciais, categorias, formatarReais, type Produto } from "@/app/dados/mock"
+import { listarProdutos, criarProduto, atualizarProduto, removerProduto } from "@/app/servicos/produtos"
+import { listarCategorias } from "@/app/servicos/categorias"
+import { useCarregar } from "@/app/ganchos/useCarregar"
+import { formatarReais } from "@/app/utilitarios/formato"
+import type { Produto, Categoria } from "@/app/tipos"
 import TabelaDados from "@/app/components/organismos/TabelaDados"
 import Modal from "@/app/components/organismos/Modal"
 import Badge from "@/app/components/atomos/Badge"
 import Botao from "@/app/components/atomos/Botao"
 import CampoTexto from "@/app/components/atomos/CampoTexto"
 import Select from "@/app/components/atomos/Select"
+import EstadoConteudo from "@/app/components/celulas/EstadoConteudo"
 
 interface FormProduto {
   nome: string
@@ -16,17 +21,25 @@ interface FormProduto {
   categoriaId: string
 }
 
-const formVazio: FormProduto = { nome: "", preco: "", estoque: "", categoriaId: "1" }
+const formVazio: FormProduto = { nome: "", preco: "", estoque: "", categoriaId: "" }
 
 export default function PaginaProdutos() {
-  const [lista, setLista] = useState<Produto[]>(dadosIniciais)
+  const { dados, carregando, erro, recarregar } = useCarregar(async () => {
+    const [produtos, categorias] = await Promise.all([listarProdutos(), listarCategorias()])
+    return { produtos, categorias }
+  })
+
+  const lista: Produto[] = dados?.produtos ?? []
+  const categorias: Categoria[] = dados?.categorias ?? []
+
   const [filtroCategoria, setFiltroCategoria] = useState("todos")
   const [modalAberto, setModalAberto] = useState(false)
   const [editando, setEditando] = useState<Produto | null>(null)
   const [form, setForm] = useState<FormProduto>(formVazio)
   const [erros, setErros] = useState<Partial<FormProduto>>({})
+  const [erroSalvar, setErroSalvar] = useState("")
+  const [salvando, setSalvando] = useState(false)
   const [deletando, setDeletando] = useState<number | null>(null)
-  const [proximo, setProximo] = useState(lista.length + 1)
 
   const filtrados = lista.filter(p =>
     filtroCategoria === "todos" || String(p.categoriaId) === filtroCategoria
@@ -36,6 +49,7 @@ export default function PaginaProdutos() {
     setEditando(null)
     setForm(formVazio)
     setErros({})
+    setErroSalvar("")
     setModalAberto(true)
   }
 
@@ -43,6 +57,7 @@ export default function PaginaProdutos() {
     setEditando(p)
     setForm({ nome: p.nome, preco: String(p.preco), estoque: String(p.estoque), categoriaId: String(p.categoriaId ?? "") })
     setErros({})
+    setErroSalvar("")
     setModalAberto(true)
   }
 
@@ -54,22 +69,37 @@ export default function PaginaProdutos() {
     return e
   }
 
-  function salvar() {
+  async function salvar() {
     const e = validar()
     if (Object.keys(e).length > 0) { setErros(e); return }
-    const dados = {
+    const dadosProduto = {
       nome: form.nome,
       preco: Number(form.preco),
       estoque: Number(form.estoque),
       categoriaId: form.categoriaId ? Number(form.categoriaId) : null,
     }
-    if (editando) {
-      setLista(prev => prev.map(p => p.id === editando.id ? { ...p, ...dados } : p))
-    } else {
-      setLista(prev => [...prev, { id: proximo, ...dados }])
-      setProximo(n => n + 1)
+    setSalvando(true)
+    setErroSalvar("")
+    try {
+      if (editando) await atualizarProduto(editando.id, dadosProduto)
+      else await criarProduto(dadosProduto)
+      setModalAberto(false)
+      recarregar()
+    } catch (err) {
+      setErroSalvar((err as Error).message)
+    } finally {
+      setSalvando(false)
     }
-    setModalAberto(false)
+  }
+
+  async function deletar(id: number) {
+    try {
+      await removerProduto(id)
+      setDeletando(null)
+      recarregar()
+    } catch {
+      setDeletando(null)
+    }
   }
 
   const opcoesCategorias = [
@@ -117,7 +147,7 @@ export default function PaginaProdutos() {
         if (deletando === id) {
           return (
             <div className="flex items-center gap-2 justify-end">
-              <button onClick={() => { setLista(p => p.filter(x => x.id !== id)); setDeletando(null) }} className="text-[10px] text-[#ef4444] uppercase tracking-widest hover:underline">Confirmar</button>
+              <button onClick={() => deletar(id)} className="text-[10px] text-[#ef4444] uppercase tracking-widest hover:underline">Confirmar</button>
               <button onClick={() => setDeletando(null)} className="text-[10px] text-[#666] uppercase tracking-widest hover:underline">Cancelar</button>
             </div>
           )
@@ -166,7 +196,9 @@ export default function PaginaProdutos() {
       </div>
 
       <div className="bg-[#1a1a1a] border border-white/[0.08]">
-        <TabelaDados colunas={colunas} dados={filtrados as unknown as Record<string, unknown>[]} semDados="Nenhum produto encontrado" />
+        <EstadoConteudo carregando={carregando} erro={erro} aoTentar={recarregar}>
+          <TabelaDados colunas={colunas} dados={filtrados as unknown as Record<string, unknown>[]} semDados="Nenhum produto encontrado" />
+        </EstadoConteudo>
       </div>
 
       <Modal aberto={modalAberto} onFechar={() => setModalAberto(false)} titulo={editando ? "Editar Produto" : "Novo Produto"}>
@@ -202,9 +234,10 @@ export default function PaginaProdutos() {
             value={form.categoriaId}
             onChange={e => setForm(p => ({ ...p, categoriaId: e.target.value }))}
           />
+          {erroSalvar && <p className="text-[#ef4444] text-xs">{erroSalvar}</p>}
           <div className="flex justify-end gap-3 pt-2">
             <Botao variante="fantasma" onClick={() => setModalAberto(false)}>Cancelar</Botao>
-            <Botao onClick={salvar}>Salvar</Botao>
+            <Botao onClick={salvar} carregando={salvando}>Salvar</Botao>
           </div>
         </div>
       </Modal>
