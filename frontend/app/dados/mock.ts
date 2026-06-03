@@ -137,6 +137,19 @@ export const vendasPorEstado = [
   { estado: "CE", total: 259.70  },
 ]
 
+export function vendasPorLocal(campo: "estado" | "cidade" | "pais") {
+  const mapa: Record<string, number> = {}
+  pedidos.forEach(p => {
+    const cliente = clientes.find(c => c.id === p.clienteId)
+    if (!cliente) return
+    const chave = cliente[campo]
+    mapa[chave] = (mapa[chave] ?? 0) + p.total
+  })
+  return Object.entries(mapa)
+    .map(([rotulo, total]) => ({ rotulo, total }))
+    .sort((a, b) => b.total - a.total)
+}
+
 export function formatarReais(valor: number): string {
   return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 }

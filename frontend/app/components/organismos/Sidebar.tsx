@@ -79,11 +79,17 @@ const navLinks = [
   },
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ aberto, aoFechar }: { aberto: boolean; aoFechar: () => void }) {
   const pathname = usePathname()
 
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-60 bg-[#0f0f0f] border-r border-white/[0.06] flex flex-col z-40">
+    <aside
+      className={`
+        no-print fixed left-0 top-0 bottom-0 w-60 bg-[#0f0f0f] border-r border-white/[0.06]
+        flex flex-col z-50 transition-transform duration-300 lg:translate-x-0
+        ${aberto ? "translate-x-0" : "-translate-x-full"}
+      `}
+    >
       <div className="flex items-center gap-3 px-5 h-16 border-b border-white/[0.06]">
         <img src="/Logo.svg" alt="BEAST" className="h-11 w-auto" />
       </div>
@@ -95,6 +101,7 @@ export default function Sidebar() {
             <Link
               key={href}
               href={href}
+              onClick={aoFechar}
               className={`
                 flex items-center gap-3 px-5 py-2.5 text-sm transition-colors duration-150
                 border-l-2 mx-0

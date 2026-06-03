@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { clientes, pedidos, produtos, scoreClientes, vendasPorMes as vendasMesRaw, formatarReais, formatarData } from "@/app/dados/mock"
+import { clientes, pedidos, produtos, scoreClientes, vendasPorMes as vendasMesRaw, vendasPorLocal, formatarReais, formatarData } from "@/app/dados/mock"
 import CardStat from "@/app/components/celulas/CardStat"
 import GraficoBarras from "@/app/components/celulas/GraficoBarras"
 import BarrasHorizontais from "@/app/components/celulas/BarrasHorizontais"
@@ -15,6 +15,19 @@ export default function PaginaDashboard() {
   const taxaChurn = ((altosRisco / clientes.length) * 100).toFixed(0)
 
   const vendasPorMes = vendasMesRaw.map(v => ({ rotulo: v.mes, valor: v.total }))
+
+  const vendasCidade = vendasPorLocal("cidade").slice(0, 6).map(v => ({ rotulo: v.rotulo, valor: v.total }))
+
+  const receitaPorProduto = produtos
+    .map(p => {
+      const receita = pedidos.reduce((acc, pedido) => {
+        const item = pedido.itens.find(i => i.produtoId === p.id)
+        return acc + (item ? item.quantidade * p.preco : 0)
+      }, 0)
+      return { rotulo: p.nome, valor: receita }
+    })
+    .sort((a, b) => b.valor - a.valor)
+    .slice(0, 6)
 
   const contagemProdutos: Record<number, number> = {}
   pedidos.forEach(p => {
@@ -116,6 +129,17 @@ export default function PaginaDashboard() {
         <div className="bg-[#1a1a1a] border border-white/[0.08] p-6">
           <h2 className="font-display text-xl text-white tracking-wide mb-6">TOP PRODUTOS</h2>
           <BarrasHorizontais dados={topProdutos} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-8">
+        <div className="bg-[#1a1a1a] border border-white/[0.08] p-6">
+          <h2 className="font-display text-xl text-white tracking-wide mb-6">VENDAS POR CIDADE</h2>
+          <BarrasHorizontais dados={vendasCidade} formatarValor={formatarReais} />
+        </div>
+        <div className="bg-[#1a1a1a] border border-white/[0.08] p-6">
+          <h2 className="font-display text-xl text-white tracking-wide mb-6">RECEITA POR PRODUTO</h2>
+          <BarrasHorizontais dados={receitaPorProduto} formatarValor={formatarReais} />
         </div>
       </div>
 

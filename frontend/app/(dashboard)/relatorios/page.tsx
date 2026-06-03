@@ -1,6 +1,6 @@
 "use client"
 
-import { clientes, pedidos, produtos, scoreClientes, vendasPorMes as vendasMesRaw, vendasPorEstado, formatarReais, formatarData } from "@/app/dados/mock"
+import { clientes, pedidos, produtos, scoreClientes, vendasPorMes as vendasMesRaw, formatarReais, formatarData } from "@/app/dados/mock"
 import GraficoBarras from "@/app/components/celulas/GraficoBarras"
 import BarrasHorizontais from "@/app/components/celulas/BarrasHorizontais"
 import Badge from "@/app/components/atomos/Badge"
@@ -49,7 +49,12 @@ export default function PaginaRelatorios() {
     }))
     .sort((a, b) => b.receita - a.receita)
 
-  const receitaPorEstado = vendasPorEstado.sort((a, b) => b.total - a.total)
+  const faixasScoring = [
+    { rotulo: "0 – 25", valor: scoreClientes.filter(s => s.scoring <= 25).length },
+    { rotulo: "26 – 50", valor: scoreClientes.filter(s => s.scoring > 25 && s.scoring <= 50).length },
+    { rotulo: "51 – 75", valor: scoreClientes.filter(s => s.scoring > 50 && s.scoring <= 75).length },
+    { rotulo: "76 – 100", valor: scoreClientes.filter(s => s.scoring > 75).length },
+  ]
 
   const clientesChurn = clientes
     .map(c => ({ cliente: c, score: scoreClientes.find(s => s.clienteId === c.id) }))
@@ -74,7 +79,7 @@ export default function PaginaRelatorios() {
           <h1 className="font-display text-5xl text-white tracking-wide">RELATÓRIOS</h1>
           <p className="text-[#4d4d4d] text-sm mt-1">Gerado em {new Date().toLocaleDateString("pt-BR")}</p>
         </div>
-        <button className="flex items-center gap-2 text-[#f97316] text-xs tracking-widest uppercase hover:underline">
+        <button onClick={() => window.print()} className="no-print flex items-center gap-2 text-[#f97316] text-xs tracking-widest uppercase hover:underline">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
           </svg>
@@ -139,9 +144,10 @@ export default function PaginaRelatorios() {
                   )
                 })}
               </div>
+              <p className="text-[10px] text-[#4d4d4d] uppercase tracking-widest mb-4">Distribuição de scoring</p>
               <BarrasHorizontais
-                dados={vendasPorEstado.slice(0, 5).map(v => ({ rotulo: v.estado, valor: v.total }))}
-                formatarValor={formatarReais}
+                dados={faixasScoring}
+                formatarValor={v => `${v} alunos`}
               />
             </div>
             <div>

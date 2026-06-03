@@ -25,7 +25,7 @@ export default function BarrasHorizontais({ dados, formatarValor }: PropsBarrasH
                 style={{ width: `${largura}%` }}
               />
             </div>
-            <span className="text-xs text-[#cccccc] font-mono w-8 text-right shrink-0">
+            <span className="text-xs text-[#cccccc] font-mono min-w-[2rem] text-right shrink-0 whitespace-nowrap">
               {formatar(valor)}
             </span>
           </div>

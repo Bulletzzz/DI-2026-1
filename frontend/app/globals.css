@@ -105,3 +105,26 @@ body {
   align-items: center;
   padding: 16px;
 }
+
+@media print {
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .casca-conteudo {
+    margin-left: 0 !important;
+  }
+
+  .animar-entrada {
+    animation: none !important;
+  }
+
+  @page {
+    margin: 12mm;
+  }
+}
