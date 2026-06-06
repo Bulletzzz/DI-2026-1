@@ -48,6 +48,8 @@ next-env.d.ts
 .temp
 .tmp
 
+PROPEDRO.md
+
 pids
 *.pid
 *.seed
