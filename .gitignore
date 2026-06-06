@@ -25,6 +25,11 @@ lerna-debug.log*
 *.log
 logs
 
+__pycache__/
+benchmarks/
+models/
+*.pyc
+
 .DS_Store
 /.nyc_output
 /.idea
