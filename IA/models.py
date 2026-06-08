@@ -13,10 +13,6 @@ FEATURES = [
 
 
 def treinar_scoring(df: pd.DataFrame) -> RandomForestRegressor:
-    """
-    Treina um Random Forest Regressor para prever o score de compra (0–100).
-    Imprime MAE e R² ao final.
-    """
     X = df[FEATURES]
     y = df["score_compra"]
 
