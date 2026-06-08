@@ -13,7 +13,7 @@ import Botao from "@/app/components/atomos/Botao"
 import CampoTexto from "@/app/components/atomos/CampoTexto"
 import EstadoConteudo from "@/app/components/celulas/EstadoConteudo"
 
-const formVazio: NovoCliente = { nome: "", email: "", cidade: "", estado: "", pais: "Brasil" }
+const formVazio: NovoCliente = { nome: "", email: "", cidade: "", estado: "", pais: "Brasil", temPlano: false }
 
 export default function PaginaClientes() {
   const router = useRouter()
@@ -50,7 +50,7 @@ export default function PaginaClientes() {
 
   function abrirEditar(c: Cliente) {
     setEditando(c)
-    setForm({ nome: c.nome, email: c.email, cidade: c.cidade, estado: c.estado, pais: c.pais })
+    setForm({ nome: c.nome, email: c.email, cidade: c.cidade, estado: c.estado, pais: c.pais, temPlano: c.temPlano ?? false })
     setErros({})
     setErroSalvar("")
     setModalAberto(true)
@@ -138,15 +138,15 @@ export default function PaginaClientes() {
         if (deletando === id) {
           return (
             <div className="flex items-center gap-2 justify-end">
-              <button onClick={() => deletar(id)} className="text-[10px] text-[#ef4444] uppercase tracking-widest hover:underline">Confirmar</button>
-              <button onClick={() => setDeletando(null)} className="text-[10px] text-[#666] uppercase tracking-widest hover:underline">Cancelar</button>
+              <button onClick={(e) => { e.stopPropagation(); deletar(id) }} className="text-[10px] text-[#ef4444] uppercase tracking-widest hover:underline">Confirmar</button>
+              <button onClick={(e) => { e.stopPropagation(); setDeletando(null) }} className="text-[10px] text-[#666] uppercase tracking-widest hover:underline">Cancelar</button>
             </div>
           )
         }
         return (
           <div className="flex items-center gap-2 justify-end">
             <button
-              onClick={() => abrirEditar(lista.find(c => c.id === id)!)}
+              onClick={(e) => { e.stopPropagation(); abrirEditar(lista.find(c => c.id === id)!) }}
               className="text-[#666666] hover:text-[#f97316] transition-colors p-1"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -154,7 +154,7 @@ export default function PaginaClientes() {
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
               </svg>
             </button>
-            <button onClick={() => setDeletando(id)} className="text-[#666666] hover:text-[#ef4444] transition-colors p-1">
+            <button onClick={(e) => { e.stopPropagation(); setDeletando(id) }} className="text-[#666666] hover:text-[#ef4444] transition-colors p-1">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <polyline points="3 6 5 6 21 6" />
                 <path d="M19 6l-1 14H6L5 6" />
@@ -218,6 +218,15 @@ export default function PaginaClientes() {
             {campo("estado", "Estado")}
           </div>
           {campo("pais", "País")}
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={form.temPlano}
+              onChange={e => setForm(p => ({ ...p, temPlano: e.target.checked }))}
+              className="w-4 h-4 accent-[#f97316]"
+            />
+            <span className="text-sm text-[#808080]">Tem plano ativo</span>
+          </label>
           {erroSalvar && <p className="text-[#ef4444] text-xs">{erroSalvar}</p>}
           <div className="flex justify-end gap-3 pt-2">
             <Botao variante="fantasma" onClick={() => setModalAberto(false)}>Cancelar</Botao>

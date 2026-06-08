@@ -12,11 +12,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RelatoriosService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma.service");
+const ia_service_1 = require("../ia/ia.service");
 const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 let RelatoriosService = class RelatoriosService {
     prisma;
-    constructor(prisma) {
+    ia;
+    constructor(prisma, ia) {
         this.prisma = prisma;
+        this.ia = ia;
     }
     async vendasPorMes() {
         const pedidos = await this.prisma.pedido.findMany({ select: { total: true, criadoEm: true } });
@@ -57,27 +60,21 @@ let RelatoriosService = class RelatoriosService {
             .sort((a, b) => b.receita - a.receita);
     }
     async topClientes(limite) {
-        const pedidos = await this.prisma.pedido.findMany({
-            include: { cliente: { select: { id: true, nome: true, estado: true } } },
+        const scores = await this.ia.listarScores().catch(() => []);
+        const clientes = await this.prisma.cliente.findMany({
+            select: { id: true, nome: true, estado: true },
         });
-        const grupos = {};
-        for (const p of pedidos) {
-            const { id, nome, estado } = p.cliente;
-            if (!grupos[id])
-                grupos[id] = { nome, estado, totalPedidos: 0, ultimoPedido: p.criadoEm };
-            grupos[id].totalPedidos += 1;
-            if (p.criadoEm > grupos[id].ultimoPedido)
-                grupos[id].ultimoPedido = p.criadoEm;
-        }
-        return Object.entries(grupos)
-            .map(([clienteId, dados]) => ({
-            clienteId: Number(clienteId),
-            nome: dados.nome,
-            estado: dados.estado,
-            totalPedidos: dados.totalPedidos,
-            ultimoPedido: dados.ultimoPedido.toISOString().split('T')[0],
-            scoring: 0,
-            riscoChurn: 'baixo',
+        const clienteMap = new Map(clientes.map((c) => [c.id, c]));
+        return scores
+            .filter((s) => clienteMap.has(s.clienteId))
+            .map((s) => ({
+            clienteId: s.clienteId,
+            nome: clienteMap.get(s.clienteId).nome,
+            estado: clienteMap.get(s.clienteId).estado,
+            totalPedidos: s.totalPedidos,
+            scoring: s.scoring,
+            riscoChurn: s.riscoChurn,
+            ultimoPedido: s.ultimoPedido ?? '',
         }))
             .sort((a, b) => b.totalPedidos - a.totalPedidos)
             .slice(0, limite);
@@ -111,23 +108,31 @@ let RelatoriosService = class RelatoriosService {
         }));
     }
     async projecaoReceita() {
+        const scores = await this.ia.listarScores().catch(() => []);
         const pedidos = await this.prisma.pedido.findMany({ select: { total: true } });
         const totalClientes = await this.prisma.cliente.count();
         const receitaAtual = pedidos.reduce((soma, p) => soma + p.total, 0);
         const ticketMedio = totalClientes > 0 ? receitaAtual / totalClientes : 0;
+        const clientesAltoScoring = scores.filter((s) => s.scoring >= 75).length;
+        const receitaProjetada = scores.reduce((soma, s) => soma + ticketMedio * (s.scoring / 100), 0);
+        const clientesRiscoAlto = scores.filter((s) => s.riscoChurn === 'alto').length;
+        const receitaEmRisco = scores
+            .filter((s) => s.riscoChurn === 'alto')
+            .reduce((soma, s) => soma + s.ticketMedio, 0);
         return {
             receitaAtual,
             ticketMedio,
-            clientesAltoScoring: 0,
-            receitaProjetada: 0,
-            clientesRiscoAlto: 0,
-            receitaEmRisco: 0,
+            clientesAltoScoring,
+            receitaProjetada: Math.round(receitaProjetada * 100) / 100,
+            clientesRiscoAlto,
+            receitaEmRisco: Math.round(receitaEmRisco * 100) / 100,
         };
     }
 };
 exports.RelatoriosService = RelatoriosService;
 exports.RelatoriosService = RelatoriosService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        ia_service_1.IaService])
 ], RelatoriosService);
 //# sourceMappingURL=relatorios.service.js.map

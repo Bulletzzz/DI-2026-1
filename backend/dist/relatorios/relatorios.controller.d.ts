@@ -16,15 +16,7 @@ export declare class RelatoriosController {
         receita: number;
         produtoId: number;
     }[]>;
-    topClientes(limite?: string): Promise<{
-        clienteId: number;
-        nome: string;
-        estado: string;
-        totalPedidos: number;
-        ultimoPedido: string;
-        scoring: number;
-        riscoChurn: "baixo";
-    }[]>;
+    topClientes(limite?: string): Promise<any>;
     topProdutos(limite?: string): Promise<{
         nome: string;
         quantidade: number;
@@ -39,9 +31,9 @@ export declare class RelatoriosController {
     projecaoReceita(): Promise<{
         receitaAtual: number;
         ticketMedio: number;
-        clientesAltoScoring: number;
+        clientesAltoScoring: any;
         receitaProjetada: number;
-        clientesRiscoAlto: number;
+        clientesRiscoAlto: any;
         receitaEmRisco: number;
     }>;
 }

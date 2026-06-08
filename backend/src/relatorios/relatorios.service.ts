@@ -1,11 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
+import { IaService } from '../ia/ia.service';
 
 const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
 @Injectable()
 export class RelatoriosService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private ia: IaService,
+  ) {}
 
   async vendasPorMes() {
     const pedidos = await this.prisma.pedido.findMany({ select: { total: true, criadoEm: true } });
@@ -54,29 +58,25 @@ export class RelatoriosService {
   }
 
   async topClientes(limite: number) {
-    const pedidos = await this.prisma.pedido.findMany({
-      include: { cliente: { select: { id: true, nome: true, estado: true } } },
+    const scores = await this.ia.listarScores().catch(() => []);
+
+    const clientes = await this.prisma.cliente.findMany({
+      select: { id: true, nome: true, estado: true },
     });
+    const clienteMap = new Map(clientes.map((c) => [c.id, c]));
 
-    const grupos: Record<number, { nome: string; estado: string; totalPedidos: number; ultimoPedido: Date }> = {};
-    for (const p of pedidos) {
-      const { id, nome, estado } = p.cliente;
-      if (!grupos[id]) grupos[id] = { nome, estado, totalPedidos: 0, ultimoPedido: p.criadoEm };
-      grupos[id].totalPedidos += 1;
-      if (p.criadoEm > grupos[id].ultimoPedido) grupos[id].ultimoPedido = p.criadoEm;
-    }
-
-    return Object.entries(grupos)
-      .map(([clienteId, dados]) => ({
-        clienteId: Number(clienteId),
-        nome: dados.nome,
-        estado: dados.estado,
-        totalPedidos: dados.totalPedidos,
-        ultimoPedido: dados.ultimoPedido.toISOString().split('T')[0],
-        scoring: 0,
-        riscoChurn: 'baixo' as const,
+    return scores
+      .filter((s: any) => clienteMap.has(s.clienteId))
+      .map((s: any) => ({
+        clienteId: s.clienteId,
+        nome: clienteMap.get(s.clienteId)!.nome,
+        estado: clienteMap.get(s.clienteId)!.estado,
+        totalPedidos: s.totalPedidos,
+        scoring: s.scoring,
+        riscoChurn: s.riscoChurn,
+        ultimoPedido: s.ultimoPedido ?? '',
       }))
-      .sort((a, b) => b.totalPedidos - a.totalPedidos)
+      .sort((a: any, b: any) => b.totalPedidos - a.totalPedidos)
       .slice(0, limite);
   }
 
@@ -113,18 +113,27 @@ export class RelatoriosService {
   }
 
   async projecaoReceita() {
+    const scores = await this.ia.listarScores().catch(() => []);
     const pedidos = await this.prisma.pedido.findMany({ select: { total: true } });
     const totalClientes = await this.prisma.cliente.count();
+
     const receitaAtual = pedidos.reduce((soma, p) => soma + p.total, 0);
     const ticketMedio = totalClientes > 0 ? receitaAtual / totalClientes : 0;
+
+    const clientesAltoScoring = scores.filter((s: any) => s.scoring >= 75).length;
+    const receitaProjetada = scores.reduce((soma: number, s: any) => soma + ticketMedio * (s.scoring / 100), 0);
+    const clientesRiscoAlto = scores.filter((s: any) => s.riscoChurn === 'alto').length;
+    const receitaEmRisco = scores
+      .filter((s: any) => s.riscoChurn === 'alto')
+      .reduce((soma: number, s: any) => soma + s.ticketMedio, 0);
 
     return {
       receitaAtual,
       ticketMedio,
-      clientesAltoScoring: 0,
-      receitaProjetada: 0,
-      clientesRiscoAlto: 0,
-      receitaEmRisco: 0,
+      clientesAltoScoring,
+      receitaProjetada: Math.round(receitaProjetada * 100) / 100,
+      clientesRiscoAlto,
+      receitaEmRisco: Math.round(receitaEmRisco * 100) / 100,
     };
   }
 }

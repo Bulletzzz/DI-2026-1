@@ -11,11 +11,13 @@ const common_1 = require("@nestjs/common");
 const relatorios_controller_1 = require("./relatorios.controller");
 const relatorios_service_1 = require("./relatorios.service");
 const prisma_service_1 = require("../prisma.service");
+const ia_module_1 = require("../ia/ia.module");
 let RelatoriosModule = class RelatoriosModule {
 };
 exports.RelatoriosModule = RelatoriosModule;
 exports.RelatoriosModule = RelatoriosModule = __decorate([
     (0, common_1.Module)({
+        imports: [ia_module_1.IaModule],
         controllers: [relatorios_controller_1.RelatoriosController],
         providers: [relatorios_service_1.RelatoriosService, prisma_service_1.PrismaService],
     })

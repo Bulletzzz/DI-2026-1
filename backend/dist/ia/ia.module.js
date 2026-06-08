@@ -6,20 +6,18 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DashboardModule = void 0;
+exports.IaModule = void 0;
 const common_1 = require("@nestjs/common");
-const dashboard_controller_1 = require("./dashboard.controller");
-const dashboard_service_1 = require("./dashboard.service");
-const prisma_service_1 = require("../prisma.service");
-const ia_module_1 = require("../ia/ia.module");
-let DashboardModule = class DashboardModule {
+const ia_controller_1 = require("./ia.controller");
+const ia_service_1 = require("./ia.service");
+let IaModule = class IaModule {
 };
-exports.DashboardModule = DashboardModule;
-exports.DashboardModule = DashboardModule = __decorate([
+exports.IaModule = IaModule;
+exports.IaModule = IaModule = __decorate([
     (0, common_1.Module)({
-        imports: [ia_module_1.IaModule],
-        controllers: [dashboard_controller_1.DashboardController],
-        providers: [dashboard_service_1.DashboardService, prisma_service_1.PrismaService],
+        controllers: [ia_controller_1.IaController],
+        providers: [ia_service_1.IaService],
+        exports: [ia_service_1.IaService],
     })
-], DashboardModule);
-//# sourceMappingURL=dashboard.module.js.map
+], IaModule);
+//# sourceMappingURL=ia.module.js.map

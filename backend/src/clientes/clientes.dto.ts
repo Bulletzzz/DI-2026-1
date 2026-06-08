@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsBoolean, IsOptional } from 'class-validator';
 
 export class NovoClienteDto {
   @IsNotEmpty()
@@ -15,4 +15,8 @@ export class NovoClienteDto {
 
   @IsNotEmpty()
   pais: string;
+
+  @IsOptional()
+  @IsBoolean()
+  temPlano?: boolean;
 }

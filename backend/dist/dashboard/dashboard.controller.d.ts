@@ -7,6 +7,6 @@ export declare class DashboardController {
         receitaTotal: number;
         ticketMedio: number;
         taxaChurn: number;
-        clientesRiscoAlto: number;
+        clientesRiscoAlto: any;
     }>;
 }

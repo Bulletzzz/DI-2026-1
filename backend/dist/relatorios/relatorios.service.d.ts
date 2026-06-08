@@ -1,7 +1,9 @@
 import { PrismaService } from '../prisma.service';
+import { IaService } from '../ia/ia.service';
 export declare class RelatoriosService {
     private prisma;
-    constructor(prisma: PrismaService);
+    private ia;
+    constructor(prisma: PrismaService, ia: IaService);
     vendasPorMes(): Promise<{
         mes: string;
         total: number;
@@ -16,15 +18,7 @@ export declare class RelatoriosService {
         receita: number;
         produtoId: number;
     }[]>;
-    topClientes(limite: number): Promise<{
-        clienteId: number;
-        nome: string;
-        estado: string;
-        totalPedidos: number;
-        ultimoPedido: string;
-        scoring: number;
-        riscoChurn: "baixo";
-    }[]>;
+    topClientes(limite: number): Promise<any>;
     topProdutos(limite: number): Promise<{
         nome: string;
         quantidade: number;
@@ -39,9 +33,9 @@ export declare class RelatoriosService {
     projecaoReceita(): Promise<{
         receitaAtual: number;
         ticketMedio: number;
-        clientesAltoScoring: number;
+        clientesAltoScoring: any;
         receitaProjetada: number;
-        clientesRiscoAlto: number;
+        clientesRiscoAlto: any;
         receitaEmRisco: number;
     }>;
 }

@@ -17,6 +17,7 @@ class NovoClienteDto {
     cidade;
     estado;
     pais;
+    temPlano;
 }
 exports.NovoClienteDto = NovoClienteDto;
 __decorate([
@@ -39,4 +40,9 @@ __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], NovoClienteDto.prototype, "pais", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], NovoClienteDto.prototype, "temPlano", void 0);
 //# sourceMappingURL=clientes.dto.js.map

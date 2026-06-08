@@ -4,4 +4,5 @@ export declare class NovoClienteDto {
     cidade: string;
     estado: string;
     pais: string;
+    temPlano?: boolean;
 }

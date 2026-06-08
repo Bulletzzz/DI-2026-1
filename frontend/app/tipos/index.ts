@@ -7,6 +7,7 @@ export interface Cliente {
   cidade: string
   estado: string
   pais: string
+  temPlano: boolean
   criadoEm: string
 }
 
@@ -51,6 +52,7 @@ export interface NovoCliente {
   cidade: string
   estado: string
   pais: string
+  temPlano: boolean
 }
 
 export interface NovoProduto {
