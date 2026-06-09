@@ -14,10 +14,10 @@ export default function BarrasHorizontais({ dados, formatarValor }: PropsBarrasH
 
   return (
     <div className="flex flex-col gap-4 w-full">
-      {dados.map(({ rotulo, valor }) => {
+      {dados.map(({ rotulo, valor }, indice) => {
         const largura = maximo > 0 ? (valor / maximo) * 100 : 0
         return (
-          <div key={rotulo} className="flex items-center gap-3">
+          <div key={`${rotulo}-${indice}`} className="flex items-center gap-3">
             <span className="text-xs text-[#808080] w-36 truncate shrink-0">{rotulo}</span>
             <div className="flex-1 h-1.5 bg-[#262626]">
               <div

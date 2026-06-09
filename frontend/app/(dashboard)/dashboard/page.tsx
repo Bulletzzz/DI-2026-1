@@ -80,7 +80,7 @@ export default function PaginaDashboard() {
               <CardStat rotulo="Total de Alunos" valor={String(dados.resumo.totalClientes)} descricao="cadastrados" />
               <CardStat rotulo="Receita Total" valor={formatarReais(dados.resumo.receitaTotal)} descricao="todos os pedidos" />
               <CardStat rotulo="Ticket Médio" valor={formatarReais(dados.resumo.ticketMedio)} descricao="por aluno" />
-              <CardStat rotulo="Taxa de Churn" valor={`${dados.resumo.taxaChurn}%`} descricao={`${dados.resumo.clientesRiscoAlto} alunos em risco alto`} destaque />
+              <CardStat rotulo="Taxa de Churn" valor={`${dados.resumo.taxaChurn.toFixed(2)}%`} descricao={`${dados.resumo.clientesRiscoAlto} alunos em risco alto`} destaque />
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-8">
