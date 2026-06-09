@@ -1,14 +1,18 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import Botao from "../components/atomos/Botao"
 import CampoTexto from "../components/atomos/CampoTexto"
 
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"
+
 export default function PaginaLogin() {
+  const router = useRouter()
   const [email, setEmail] = useState("")
   const [senha, setSenha] = useState("")
   const [carregando, setCarregando] = useState(false)
-  const [erros, setErros] = useState<{ email?: string; senha?: string }>({})
+  const [erros, setErros] = useState<{ email?: string; senha?: string; geral?: string }>({})
 
   function validar() {
     const novosErros: typeof erros = {}
@@ -22,14 +26,25 @@ export default function PaginaLogin() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const novosErros = validar()
-    if (Object.keys(novosErros).length > 0) {
-      setErros(novosErros)
-      return
-    }
+    if (Object.keys(novosErros).length > 0) { setErros(novosErros); return }
     setErros({})
     setCarregando(true)
-    await new Promise(r => setTimeout(r, 1200))
-    setCarregando(false)
+    try {
+      const res = await fetch(`${BASE}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, senha }),
+      })
+      if (!res.ok) { setErros({ geral: "E-mail ou senha inválidos" }); return }
+      const { access_token } = await res.json()
+      localStorage.setItem("beast_token", access_token)
+      document.cookie = `beast_token=${access_token}; path=/; max-age=${7 * 24 * 60 * 60}`
+      router.push("/dashboard")
+    } catch {
+      setErros({ geral: "Erro ao conectar com o servidor" })
+    } finally {
+      setCarregando(false)
+    }
   }
 
   return (
@@ -76,6 +91,7 @@ export default function PaginaLogin() {
             <Botao type="submit" carregando={carregando} className="w-full mt-2">
               Entrar
             </Botao>
+            {erros.geral && <p className="text-[#ef4444] text-xs text-center">{erros.geral}</p>}
           </form>
 
           <div className="border-t border-white/[0.06] pt-6">

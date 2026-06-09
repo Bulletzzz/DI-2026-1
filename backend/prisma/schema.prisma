@@ -52,3 +52,9 @@ model ItemPedido {
   pedido     Pedido  @relation(fields: [pedidoId], references: [id])
   produto    Produto @relation(fields: [produtoId], references: [id])
 }
+
+model Usuario {
+  id    Int    @id @default(autoincrement())
+  email String @unique
+  senha String
+}

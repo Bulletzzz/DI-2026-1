@@ -122,10 +122,25 @@ export default function Sidebar({ aberto, aoFechar }: { aberto: boolean; aoFecha
         <div className="w-8 h-8 bg-[#f97316] flex items-center justify-center text-[#0f0f0f] text-xs font-bold shrink-0">
           B
         </div>
-        <div className="flex flex-col min-w-0">
+        <div className="flex flex-col min-w-0 flex-1">
           <span className="text-xs text-white truncate">Bernardo Manga</span>
           <span className="text-[10px] text-[#4d4d4d] truncate">Admin</span>
         </div>
+        <button
+          onClick={() => {
+            localStorage.removeItem("beast_token")
+            document.cookie = "beast_token=; Max-Age=0; path=/"
+            window.location.href = "/login"
+          }}
+          title="Sair"
+          className="text-[#4d4d4d] hover:text-[#ef4444] transition-colors p-1 shrink-0"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+        </button>
       </div>
     </aside>
   )
