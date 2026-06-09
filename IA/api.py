@@ -1,9 +1,12 @@
 import os
+import time
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify
 
 load_dotenv()
+
+TTL_CACHE = int(os.getenv("TTL_CACHE", "300"))
 
 from db import buscar_features_clientes
 from predict import prever
@@ -42,14 +45,25 @@ def calcular_todos_scores() -> list[dict]:
     return resultados
 
 
+_cache = {"dados": None, "quando": 0.0}
+
+
+def obter_scores() -> list[dict]:
+    agora = time.time()
+    if _cache["dados"] is None or agora - _cache["quando"] > TTL_CACHE:
+        _cache["dados"] = calcular_todos_scores()
+        _cache["quando"] = agora
+    return _cache["dados"]
+
+
 @app.route("/scores")
 def scores():
-    return jsonify(calcular_todos_scores())
+    return jsonify(obter_scores())
 
 
 @app.route("/scores/<int:cliente_id>")
 def score_cliente(cliente_id: int):
-    todos = calcular_todos_scores()
+    todos = obter_scores()
     resultado = next((s for s in todos if s["clienteId"] == cliente_id), None)
     if resultado is None:
         return jsonify({"error": "Cliente não encontrado"}), 404

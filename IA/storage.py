@@ -1,8 +1,3 @@
-"""
-BEAST — Persistência dos Modelos
-Salva e carrega os modelos treinados em disco via joblib.
-"""
-
 import os
 
 import joblib

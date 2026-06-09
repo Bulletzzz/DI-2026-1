@@ -1,7 +1,24 @@
-from data_generator import gerar_dados_sinteticos
+import pandas as pd
+
+from db import buscar_features_clientes
 from models import treinar_churn, treinar_scoring
 from preprocessor import preprocessar
+from rotulagem import rotular
 from storage import salvar_modelos
+
+FEATURES = [
+    "total_pedidos",
+    "ticket_medio",
+    "tempo_como_cliente",
+    "dias_desde_ultimo_pedido",
+    "tem_plano",
+]
+
+
+def carregar_dados_reais() -> pd.DataFrame:
+    registros = buscar_features_clientes()
+    df = pd.DataFrame(registros)[FEATURES]
+    return rotular(df)
 
 
 def main() -> None:
@@ -9,9 +26,9 @@ def main() -> None:
     print("  BEAST — Treinamento dos Modelos de IA")
     print("=" * 50)
 
-    print("\n[1/4] Gerando dados sintéticos...")
-    df_raw = gerar_dados_sinteticos(n=500)
-    print(f"      {len(df_raw)} registros gerados.")
+    print("\n[1/4] Carregando dados reais do banco...")
+    df_raw = carregar_dados_reais()
+    print(f"      {len(df_raw)} clientes carregados.")
     print(f"      Distribuição churn:\n{df_raw['churn_label'].value_counts().to_string()}")
 
     print("\n[2/4] Pré-processando dados...")
@@ -26,7 +43,7 @@ def main() -> None:
 
     salvar_modelos(modelo_scoring, modelo_churn, scaler)
 
-    print("\n✓ Treinamento concluído! Execute 'python predict.py' para testar.")
+    print("\nTreinamento concluído! Execute 'python predict.py' para testar.")
 
 
 if __name__ == "__main__":
