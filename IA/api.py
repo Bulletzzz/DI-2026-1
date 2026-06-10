@@ -9,7 +9,7 @@ load_dotenv()
 TTL_CACHE = int(os.getenv("TTL_CACHE", "300"))
 
 from db import buscar_features_clientes
-from predict import prever
+from predict import prever_lote
 from storage import carregar_modelos
 
 app = Flask(__name__)
@@ -21,22 +21,17 @@ NORMALIZAR_CHURN = {"médio": "medio", "alto": "alto", "baixo": "baixo"}
 
 def calcular_todos_scores() -> list[dict]:
     clientes = buscar_features_clientes()
+    if not clientes:
+        return []
+
+    scores, churns = prever_lote(clientes, modelo_scoring, modelo_churn, scaler)
+
     resultados = []
-
-    for c in clientes:
-        features = {
-            "total_pedidos": c["total_pedidos"],
-            "ticket_medio": c["ticket_medio"],
-            "tempo_como_cliente": c["tempo_como_cliente"],
-            "dias_desde_ultimo_pedido": c["dias_desde_ultimo_pedido"],
-            "tem_plano": c["tem_plano"],
-        }
-        pred = prever(features, modelo_scoring, modelo_churn, scaler)
-
+    for c, score, churn in zip(clientes, scores, churns):
         resultados.append({
             "clienteId": c["cliente_id"],
-            "scoring": pred["score_compra"],
-            "riscoChurn": NORMALIZAR_CHURN.get(pred["risco_churn"], pred["risco_churn"]),
+            "scoring": float(score),
+            "riscoChurn": NORMALIZAR_CHURN.get(churn, churn),
             "ultimoPedido": c["ultimo_pedido"],
             "totalPedidos": c["total_pedidos"],
             "ticketMedio": round(c["ticket_medio"], 2),

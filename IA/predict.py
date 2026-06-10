@@ -44,6 +44,21 @@ def prever(
     }
 
 
+def prever_lote(
+    clientes: list[dict],
+    modelo_scoring: RandomForestRegressor,
+    modelo_churn: RandomForestClassifier,
+    scaler: MinMaxScaler,
+):
+    df = pd.DataFrame(clientes)[FEATURES].copy()
+    df[COLUNAS_NORM] = scaler.transform(df[COLUNAS_NORM])
+
+    scores = np.clip(modelo_scoring.predict(df), 0, 100).round(1)
+    churns = modelo_churn.predict(df)
+
+    return scores, churns
+
+
 if __name__ == "__main__":
     try:
         entrada = sys.stdin.read().strip()
