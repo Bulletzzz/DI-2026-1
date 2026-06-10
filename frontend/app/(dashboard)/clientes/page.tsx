@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation"
 import { listarClientes, criarCliente, atualizarCliente, removerCliente } from "@/app/servicos/clientes"
 import { listarScores } from "@/app/servicos/ia"
 import { useCarregar } from "@/app/ganchos/useCarregar"
+import { usePaginacao } from "@/app/ganchos/usePaginacao"
 import type { Cliente, ScoreCliente, NovoCliente } from "@/app/tipos"
 import TabelaDados from "@/app/components/organismos/TabelaDados"
+import Paginacao from "@/app/components/celulas/Paginacao"
 import Modal from "@/app/components/organismos/Modal"
 import Badge from "@/app/components/atomos/Badge"
 import Botao from "@/app/components/atomos/Botao"
@@ -39,6 +41,8 @@ export default function PaginaClientes() {
     c.email.toLowerCase().includes(busca.toLowerCase()) ||
     c.cidade.toLowerCase().includes(busca.toLowerCase())
   )
+
+  const pag = usePaginacao(filtrados, 20, busca)
 
   function abrirCriar() {
     setEditando(null)
@@ -98,9 +102,9 @@ export default function PaginaClientes() {
     <CampoTexto
       rotulo={rotulo}
       type={tipo}
-      value={form[chave]}
+      value={String(form[chave] ?? "")}
       onChange={e => { setForm(p => ({ ...p, [chave]: e.target.value })); setErros(p => ({ ...p, [chave]: undefined })) }}
-      erro={erros[chave]}
+      erro={erros[chave] as string | undefined}
     />
   )
 
@@ -202,10 +206,11 @@ export default function PaginaClientes() {
         <EstadoConteudo carregando={carregando} erro={erro} aoTentar={recarregar}>
           <TabelaDados
             colunas={colunas}
-            dados={filtrados as unknown as Record<string, unknown>[]}
+            dados={pag.visiveis as unknown as Record<string, unknown>[]}
             aoClicarLinha={l => router.push(`/clientes/${l.id}`)}
             semDados="Nenhum aluno encontrado"
           />
+          <Paginacao pagina={pag.pagina} totalPaginas={pag.totalPaginas} total={pag.total} inicio={pag.inicio} quantidade={pag.visiveis.length} aoIr={pag.irPara} />
         </EstadoConteudo>
       </div>
 

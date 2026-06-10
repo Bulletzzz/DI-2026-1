@@ -4,9 +4,11 @@ import { useState } from "react"
 import { listarProdutos, criarProduto, atualizarProduto, removerProduto } from "@/app/servicos/produtos"
 import { listarCategorias } from "@/app/servicos/categorias"
 import { useCarregar } from "@/app/ganchos/useCarregar"
+import { usePaginacao } from "@/app/ganchos/usePaginacao"
 import { formatarReais } from "@/app/utilitarios/formato"
 import type { Produto, Categoria } from "@/app/tipos"
 import TabelaDados from "@/app/components/organismos/TabelaDados"
+import Paginacao from "@/app/components/celulas/Paginacao"
 import Modal from "@/app/components/organismos/Modal"
 import Badge from "@/app/components/atomos/Badge"
 import Botao from "@/app/components/atomos/Botao"
@@ -32,6 +34,7 @@ export default function PaginaProdutos() {
   const lista: Produto[] = dados?.produtos ?? []
   const categorias: Categoria[] = dados?.categorias ?? []
 
+  const [busca, setBusca] = useState("")
   const [filtroCategoria, setFiltroCategoria] = useState("todos")
   const [modalAberto, setModalAberto] = useState(false)
   const [editando, setEditando] = useState<Produto | null>(null)
@@ -42,8 +45,11 @@ export default function PaginaProdutos() {
   const [deletando, setDeletando] = useState<number | null>(null)
 
   const filtrados = lista.filter(p =>
-    filtroCategoria === "todos" || String(p.categoriaId) === filtroCategoria
+    (filtroCategoria === "todos" || String(p.categoriaId) === filtroCategoria) &&
+    p.nome.toLowerCase().includes(busca.toLowerCase())
   )
+
+  const pag = usePaginacao(filtrados, 20, busca + filtroCategoria)
 
   function abrirCriar() {
     setEditando(null)
@@ -187,17 +193,32 @@ export default function PaginaProdutos() {
         </Botao>
       </div>
 
-      <div className="mb-4 w-56">
-        <Select
-          opcoes={opcoesFiltroCat}
-          value={filtroCategoria}
-          onChange={e => setFiltroCategoria(e.target.value)}
-        />
+      <div className="mb-4 flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1 max-w-md">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4d4d4d]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Buscar por nome do produto..."
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            className="w-full h-11 pl-9 pr-4 bg-[#1a1a1a] border border-white/10 text-sm text-white placeholder:text-[#4d4d4d] outline-none focus:border-[#f97316] transition-colors"
+          />
+        </div>
+        <div className="w-full sm:w-56">
+          <Select
+            opcoes={opcoesFiltroCat}
+            value={filtroCategoria}
+            onChange={e => setFiltroCategoria(e.target.value)}
+          />
+        </div>
       </div>
 
       <div className="bg-[#1a1a1a] border border-white/[0.08]">
         <EstadoConteudo carregando={carregando} erro={erro} aoTentar={recarregar}>
-          <TabelaDados colunas={colunas} dados={filtrados as unknown as Record<string, unknown>[]} semDados="Nenhum produto encontrado" />
+          <TabelaDados colunas={colunas} dados={pag.visiveis as unknown as Record<string, unknown>[]} semDados="Nenhum produto encontrado" />
+          <Paginacao pagina={pag.pagina} totalPaginas={pag.totalPaginas} total={pag.total} inicio={pag.inicio} quantidade={pag.visiveis.length} aoIr={pag.irPara} />
         </EstadoConteudo>
       </div>
 

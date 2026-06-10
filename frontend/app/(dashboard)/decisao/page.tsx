@@ -6,10 +6,12 @@ import { listarClientes } from "@/app/servicos/clientes"
 import { listarProdutos } from "@/app/servicos/produtos"
 import { topProdutos } from "@/app/servicos/analitica"
 import { useCarregar } from "@/app/ganchos/useCarregar"
+import { usePaginacao } from "@/app/ganchos/usePaginacao"
 import { formatarReais, formatarData } from "@/app/utilitarios/formato"
 import type { Cliente, ScoreCliente } from "@/app/tipos"
 import Badge from "@/app/components/atomos/Badge"
 import CardStat from "@/app/components/celulas/CardStat"
+import Paginacao from "@/app/components/celulas/Paginacao"
 import EstadoConteudo from "@/app/components/celulas/EstadoConteudo"
 
 function CardAluno({ score, cliente }: { score: ScoreCliente; cliente?: Cliente }) {
@@ -74,6 +76,19 @@ export default function PaginaDecisao() {
     return { scores, clientes, produtos, top }
   })
 
+  const scores = dados?.scores ?? []
+  const clientes = dados?.clientes ?? []
+  const produtos = dados?.produtos ?? []
+  const acharCliente = (id: number) => clientes.find(c => c.id === id)
+  const altosRisco = scores.filter(s => s.riscoChurn === "alto").sort((a, b) => a.scoring - b.scoring)
+  const altoScoring = scores.filter(s => s.scoring >= 70).sort((a, b) => b.scoring - a.scoring)
+  const receitaEmRisco = altosRisco.reduce((acc, s) => acc + s.ticketMedio, 0)
+  const receitaProjetada = altoScoring.reduce((acc, s) => acc + s.ticketMedio * (s.scoring / 100), 0)
+  const produtoMaisVendido = produtos.find(p => p.id === dados?.top[0]?.produtoId)
+
+  const pagRisco = usePaginacao(altosRisco, 8, scores.length)
+  const pagScoring = usePaginacao(altoScoring, 8, scores.length)
+
   return (
     <div className="p-8 animar-entrada">
       <div className="mb-10">
@@ -82,15 +97,7 @@ export default function PaginaDecisao() {
       </div>
 
       <EstadoConteudo carregando={carregando} erro={erro} aoTentar={recarregar}>
-        {dados && (() => {
-          const cliente = (id: number) => dados.clientes.find(c => c.id === id)
-          const altosRisco = dados.scores.filter(s => s.riscoChurn === "alto").sort((a, b) => a.scoring - b.scoring)
-          const altoScoring = dados.scores.filter(s => s.scoring >= 70).sort((a, b) => b.scoring - a.scoring)
-          const receitaEmRisco = altosRisco.reduce((acc, s) => acc + s.ticketMedio, 0)
-          const receitaProjetada = altoScoring.reduce((acc, s) => acc + s.ticketMedio * (s.scoring / 100), 0)
-          const produtoMaisVendido = dados.produtos.find(p => p.id === dados.top[0]?.produtoId)
-
-          return (
+        {dados && (
             <>
               <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
                 <CardStat rotulo="Em Risco Alto" valor={String(altosRisco.length)} descricao="alunos críticos" destaque />
@@ -102,16 +109,18 @@ export default function PaginaDecisao() {
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
                 <SecaoDecisao titulo="RISCO ALTO DE CHURN" subtitulo="Alunos com maior probabilidade de cancelamento" acento="#ef4444">
                   <div className="flex flex-col gap-3">
-                    {altosRisco.map(s => <CardAluno key={s.clienteId} score={s} cliente={cliente(s.clienteId)} />)}
+                    {pagRisco.visiveis.map(s => <CardAluno key={s.clienteId} score={s} cliente={acharCliente(s.clienteId)} />)}
                     {altosRisco.length === 0 && <p className="text-[#4d4d4d] text-sm">Nenhum aluno em risco alto.</p>}
                   </div>
+                  <Paginacao pagina={pagRisco.pagina} totalPaginas={pagRisco.totalPaginas} total={pagRisco.total} inicio={pagRisco.inicio} quantidade={pagRisco.visiveis.length} aoIr={pagRisco.irPara} />
                 </SecaoDecisao>
 
                 <SecaoDecisao titulo="ALTA PROPENSÃO À COMPRA" subtitulo="Alunos com maior scoring de recompra" acento="#22c55e">
                   <div className="flex flex-col gap-3">
-                    {altoScoring.map(s => <CardAluno key={s.clienteId} score={s} cliente={cliente(s.clienteId)} />)}
+                    {pagScoring.visiveis.map(s => <CardAluno key={s.clienteId} score={s} cliente={acharCliente(s.clienteId)} />)}
                     {altoScoring.length === 0 && <p className="text-[#4d4d4d] text-sm">Nenhum aluno com alto scoring.</p>}
                   </div>
+                  <Paginacao pagina={pagScoring.pagina} totalPaginas={pagScoring.totalPaginas} total={pagScoring.total} inicio={pagScoring.inicio} quantidade={pagScoring.visiveis.length} aoIr={pagScoring.irPara} />
                 </SecaoDecisao>
               </div>
 
@@ -155,8 +164,7 @@ export default function PaginaDecisao() {
                 </div>
               </SecaoDecisao>
             </>
-          )
-        })()}
+        )}
       </EstadoConteudo>
     </div>
   )

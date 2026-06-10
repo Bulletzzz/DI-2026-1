@@ -5,9 +5,11 @@ import { listarPedidos, criarPedido } from "@/app/servicos/pedidos"
 import { listarClientes } from "@/app/servicos/clientes"
 import { listarProdutos } from "@/app/servicos/produtos"
 import { useCarregar } from "@/app/ganchos/useCarregar"
+import { usePaginacao } from "@/app/ganchos/usePaginacao"
 import { formatarReais, formatarData } from "@/app/utilitarios/formato"
 import type { Pedido, Cliente, Produto } from "@/app/tipos"
 import TabelaDados from "@/app/components/organismos/TabelaDados"
+import Paginacao from "@/app/components/celulas/Paginacao"
 import Modal from "@/app/components/organismos/Modal"
 import Botao from "@/app/components/atomos/Botao"
 import Select from "@/app/components/atomos/Select"
@@ -35,14 +37,20 @@ export default function PaginaPedidos() {
   const produtos: Produto[] = dados?.produtos ?? []
 
   const [modalAberto, setModalAberto] = useState(false)
-  const [filtroCliente, setFiltroCliente] = useState("todos")
+  const [busca, setBusca] = useState("")
+  const [filtroProduto, setFiltroProduto] = useState("todos")
   const [form, setForm] = useState<FormPedido>({ clienteId: 0, itens: [] })
   const [erroSalvar, setErroSalvar] = useState("")
   const [salvando, setSalvando] = useState(false)
 
+  const nomeCliente = (id: number) => clientes.find(c => c.id === id)?.nome ?? ""
+
   const filtrados = lista.filter(p =>
-    filtroCliente === "todos" || String(p.clienteId) === filtroCliente
+    nomeCliente(p.clienteId).toLowerCase().includes(busca.toLowerCase()) &&
+    (filtroProduto === "todos" || p.itens.some(i => String(i.produtoId) === filtroProduto))
   )
+
+  const pag = usePaginacao(filtrados, 20, busca + filtroProduto)
 
   function abrirModal() {
     if (clientes.length === 0 || produtos.length === 0) return
@@ -86,9 +94,9 @@ export default function PaginaPedidos() {
     return acc + (produto?.preco ?? 0) * item.quantidade
   }, 0)
 
-  const opcoesFiltro = [
-    { valor: "todos", rotulo: "Todos os alunos" },
-    ...clientes.map(c => ({ valor: String(c.id), rotulo: c.nome })),
+  const opcoesFiltroProduto = [
+    { valor: "todos", rotulo: "Todos os produtos" },
+    ...produtos.map(p => ({ valor: String(p.id), rotulo: p.nome })),
   ]
 
   const opcoesClientes = clientes.map(c => ({ valor: c.id, rotulo: c.nome }))
@@ -145,13 +153,28 @@ export default function PaginaPedidos() {
         </Botao>
       </div>
 
-      <div className="mb-4 w-64">
-        <Select opcoes={opcoesFiltro} value={filtroCliente} onChange={e => setFiltroCliente(e.target.value)} />
+      <div className="mb-4 flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1 max-w-md">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4d4d4d]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Buscar por nome do aluno..."
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            className="w-full h-11 pl-9 pr-4 bg-[#1a1a1a] border border-white/10 text-sm text-white placeholder:text-[#4d4d4d] outline-none focus:border-[#f97316] transition-colors"
+          />
+        </div>
+        <div className="w-full sm:w-64">
+          <Select opcoes={opcoesFiltroProduto} value={filtroProduto} onChange={e => setFiltroProduto(e.target.value)} />
+        </div>
       </div>
 
       <div className="bg-[#1a1a1a] border border-white/[0.08]">
         <EstadoConteudo carregando={carregando} erro={erro} aoTentar={recarregar}>
-          <TabelaDados colunas={colunas} dados={filtrados as unknown as Record<string, unknown>[]} semDados="Nenhum pedido encontrado" />
+          <TabelaDados colunas={colunas} dados={pag.visiveis as unknown as Record<string, unknown>[]} semDados="Nenhum pedido encontrado" />
+          <Paginacao pagina={pag.pagina} totalPaginas={pag.totalPaginas} total={pag.total} inicio={pag.inicio} quantidade={pag.visiveis.length} aoIr={pag.irPara} />
         </EstadoConteudo>
       </div>
 

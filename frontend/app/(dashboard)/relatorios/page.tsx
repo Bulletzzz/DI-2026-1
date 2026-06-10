@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { vendasPorMes, receitaPorProduto, projecaoReceita } from "@/app/servicos/analitica"
 import { listarScores, resumoChurn } from "@/app/servicos/ia"
 import { listarClientes } from "@/app/servicos/clientes"
@@ -8,7 +9,15 @@ import { formatarReais, formatarData } from "@/app/utilitarios/formato"
 import GraficoBarras from "@/app/components/celulas/GraficoBarras"
 import BarrasHorizontais from "@/app/components/celulas/BarrasHorizontais"
 import Badge from "@/app/components/atomos/Badge"
+import Select from "@/app/components/atomos/Select"
 import EstadoConteudo from "@/app/components/celulas/EstadoConteudo"
+
+const opcoesRisco = [
+  { valor: "todos", rotulo: "Todos os riscos" },
+  { valor: "alto", rotulo: "Risco alto" },
+  { valor: "medio", rotulo: "Risco médio" },
+  { valor: "baixo", rotulo: "Risco baixo" },
+]
 
 function SecaoRelatorio({ titulo, subtitulo, children }: { titulo: string; subtitulo: string; children: React.ReactNode }) {
   return (
@@ -32,6 +41,7 @@ function LinhaTabel({ label, valor, destaque = false }: { label: string; valor: 
 }
 
 export default function PaginaRelatorios() {
+  const [filtroRisco, setFiltroRisco] = useState("todos")
   const { dados, carregando, erro, recarregar } = useCarregar(async () => {
     const [meses, receitaProd, churn, scores, clientes, projecao] = await Promise.all([
       vendasPorMes(),
@@ -75,7 +85,11 @@ export default function PaginaRelatorios() {
           const faixasScoring = dados.churn.distribuicaoScoring.map(f => ({ rotulo: f.faixa, valor: f.quantidade }))
           const cliente = (id: number) => dados.clientes.find(c => c.id === id)
           const ordem = { alto: 0, medio: 1, baixo: 2 }
-          const clientesChurn = dados.scores.slice().sort((a, b) => ordem[a.riscoChurn] - ordem[b.riscoChurn])
+          const churnFiltrados = dados.scores
+            .filter(s => filtroRisco === "todos" || s.riscoChurn === filtroRisco)
+            .slice()
+            .sort((a, b) => ordem[a.riscoChurn] - ordem[b.riscoChurn])
+          const clientesChurn = churnFiltrados.slice(0, 20)
 
           return (
             <div className="grid grid-cols-1 gap-6">
@@ -139,6 +153,12 @@ export default function PaginaRelatorios() {
                     <BarrasHorizontais dados={faixasScoring} formatarValor={v => `${v} alunos`} />
                   </div>
                   <div>
+                    <div className="flex items-center justify-between gap-3 mb-3 no-print">
+                      <span className="text-[10px] text-[#4d4d4d] uppercase tracking-widest">Exibindo {clientesChurn.length} de {churnFiltrados.length}</span>
+                      <div className="w-44">
+                        <Select opcoes={opcoesRisco} value={filtroRisco} onChange={e => setFiltroRisco(e.target.value)} />
+                      </div>
+                    </div>
                     {clientesChurn.map(score => {
                       const c = cliente(score.clienteId)
                       if (!c) return null
